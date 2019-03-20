@@ -4,5 +4,6 @@
     "redis-db": 0,
     "mongo-host": "127.0.0.1",
     "mongo-port": 9881,
-    "mongo-db": "twibo"
+    "mongo-db": "twibo",
+    "feeder": "none"
 }

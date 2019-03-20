@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 coll = db['user']
+coll.create_index('user_id')
 
 
 def create(user_id, extra_info):

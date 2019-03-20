@@ -2,16 +2,26 @@ import logging
 
 import pymongo
 
+from utils.config import conf
 from db.db_utils import db
 from db import user_follow
-# from feeding.feed_pull import fp
+from feeding import feeders
 
 logger = logging.getLogger(__name__)
 
 coll = db['tweet']
-feeder = None
+coll.create_index([
+    ('user_id', pymongo.ASCENDING),
+    ('ts', pymongo.DESCENDING)
+])
+coll.create_index([
+    ('tweet_id', pymongo.ASCENDING),
+    ('ts', pymongo.DESCENDING)
+])
 
-coll.create_index()
+feeder = feeders.get(conf['feeder'], None)
+logger.info('feeder is {}'.format(feeder))
+
 
 
 def create(user_id, tweet_id, content, timestamp):

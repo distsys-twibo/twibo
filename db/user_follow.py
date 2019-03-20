@@ -5,6 +5,8 @@ from db.db_utils import db, exists
 logger = logging.getLogger(__name__)
 
 coll = db['follow']
+coll.create_index('user_id')
+coll.create_index('target')
 
 
 def follow(user_id, followees):
