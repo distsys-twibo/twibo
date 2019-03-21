@@ -12,11 +12,19 @@ asyncio.gather(
 )
 
 
-async def create(user_id, extra_info):
-    return await coll.insert_one({
+async def create_many(users):
+    return await coll.insert_many(({
+        'user_id': u['user_id'],
+        'info': u['info']
+    } for u in users))
+
+
+async def create(user_id, info):
+    return await create_many([{
         'user_id': user_id,
-        'info': extra_info
-    })
+        'info': info
+    }])
+
 
 async def get(user_id):
     return await coll.find_one({

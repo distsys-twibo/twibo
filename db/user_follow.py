@@ -19,6 +19,13 @@ async def follow(user_id, followees):
     } for f in followees))
 
 
+async def follow_many(relations):
+    return await coll.insert_many(({
+        'user_id': a,
+        'target': b
+    } for (a, b) in relations))
+
+
 async def is_following(user_id, target):
     return await exists(coll, {
         'user_id': user_id,

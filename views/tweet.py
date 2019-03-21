@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from aiohttp import web
 
@@ -14,18 +15,31 @@ routes = web.RouteTableDef()
 @routes.post('/tweet/create')
 async def create(request):
     data = await request.post()
-    user_id = data['uid']
-    tweet_id = data['tid']
+    user_id = data['user_id']
+    tweet_id = data['tweet_id']
     content = data['content']
     timestamp = data['ts']
+    t1 = time.time()
     await tweet.create(user_id, tweet_id, content, timestamp)
-    return web.Response(text='0')
+    t2 = time.time()
+    return web.json_response({
+        'times': {
+            'full': t2 - t1
+        }
+    })
 
 
 @routes.get('/tweet/get')
 async def get(request):
     query = request.rel_url.query
-    user_id = query['uid']
+    user_id = query['user_id']
     limit = int(query.get('limit', 10))
+    t1 = time.time()
     tweets = await tweet.get(user_id, limit)
-    return web.json_response({'tweets': tweets})
+    t2 = time.time()
+    return web.json_response({
+        'tweets': tweets,
+        'times': {
+            'full': t2 - t1
+        }
+    })
