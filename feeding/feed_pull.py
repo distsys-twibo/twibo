@@ -15,13 +15,13 @@ class FeedPull(BaseFeeder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def create(self, user_id, tweet_id, timestamp):
+    async def create(self, user_id, tweet_id, timestamp):
         '''adds a new tweet to the user's feed list'''
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
         return db_r.zadd(self.get_key(user_id), {tweet_id: timestamp})
 
-    def get(self, user_id, limit):
+    async def get(self, user_id, limit):
         followees = user_follow.all_followees(user_id)
         feeds = []
         # get @limit feeds from each of the followees

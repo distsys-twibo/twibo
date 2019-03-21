@@ -1,3 +1,4 @@
+import json
 import logging
 
 from aiohttp import web
@@ -17,7 +18,7 @@ async def create(request):
     tweet_id = data['tid']
     content = data['content']
     timestamp = data['ts']
-    tweet.create(user_id, tweet_id, content, timestamp)
+    await tweet.create(user_id, tweet_id, content, timestamp)
     return web.Response(text='0')
 
 
@@ -25,6 +26,6 @@ async def create(request):
 async def get(request):
     query = request.rel_url.query
     user_id = query['uid']
-    limit = query.get('lim', 10)
-    tweets = tweet.get(user_id, limit)
-    return web.Response(text=str(tweets))
+    limit = int(query.get('limit', 10))
+    tweets = await tweet.get(user_id, limit)
+    return web.json_response({'tweets': tweets})

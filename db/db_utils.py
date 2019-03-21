@@ -1,7 +1,8 @@
+import asyncio
 import logging
 
-from redis import Redis
-from pymongo import MongoClient
+import aioredis
+import motor.motor_asyncio
 
 
 logger = logging.getLogger(__name__)
@@ -16,18 +17,20 @@ def init_db(conf):
     port = conf['mongo-port']
     mdb = conf['mongo-db']
     logger.debug('initializing db(mongo): {} {} {}'.format(host, port, mdb))
-    db = MongoClient(host, port)[mdb]
+    db = motor.motor_asyncio.AsyncIOMotorClient(host, port)[mdb]
 
     host = host = conf['redis-host']
     port = conf['redis-port']
     rdb = conf['redis-db']
     logger.debug('initializing db(redis): {} {} {}'.format(host, port, rdb))
-    db_r = Redis(host=host, port=port, db=rdb)
+    # don't know why yet but must run like this before running aiohttp
+    loop = asyncio.get_event_loop()
+    db_r = loop.run_until_complete(aioredis.create_redis_pool((host, port), db=rdb, maxsize=50))
 
 
-def exists(coll, query):
+async def exists(coll, query):
     try:
-        coll.find_one(query)
+        await coll.find_one(query)
     except:
         return False
     return True

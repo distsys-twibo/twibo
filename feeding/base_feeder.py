@@ -8,9 +8,9 @@ class BaseFeeder:
     def get_key(self, *args):
         return ':'.join([self._prefix, self.prefix, *args])
 
-    def create(self, user_id, tweet_id, timestamp):
+    async def create(self, user_id, tweet_id, timestamp):
         raise NotImplementedError
 
-    def get(self, user_id, limit):
+    async def get(self, user_id, limit):
         '''get newest @limit feeds from the followees of @user_id'''
         raise NotImplementedError
