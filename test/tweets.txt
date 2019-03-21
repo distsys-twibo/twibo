@@ -1,0 +1,5 @@
+# {tweet id}#~#{user id}#~#{timestamp}#~#{content}
+t1#~#1#~#12#~#itsatrap
+t2#~#3#~#13#~#its still a trap
+t3#~#3#~#13.5#~#why always me
+t4#~#2#~#15#~#til i collapse
