@@ -1,10 +1,18 @@
+import sys
+
 import requests
 
 
 url_create = 'http://localhost:9990/tweet/create'
 
 
-with open('tweets.txt') as f:
+if len(sys.argv) != 2:
+    print('args: file_name')
+    exit(1)
+
+fn = sys.argv[1]
+
+with open(fn) as f:
     lines = [_ for _ in f.read().splitlines() if not _.startswith('#')]
 
 tweets = []

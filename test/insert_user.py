@@ -7,10 +7,11 @@ url_create = 'http://localhost:9990/user/create'
 url_follow = 'http://localhost:9990/user/follow'
 
 
-fn = 'users.txt'
-if len(sys.argv) > 1:
-    fn = sys.argv[1]
-print('read from', fn)
+if len(sys.argv) != 2:
+    print('args: file_name')
+    exit(1)
+
+fn = sys.argv[1]
 
 
 with open(fn) as f:
