@@ -21,4 +21,4 @@ async def create(user_id, extra_info):
 async def get(user_id):
     return await coll.find_one({
         'user_id': user_id
-    })
+    }, {'_id': False})

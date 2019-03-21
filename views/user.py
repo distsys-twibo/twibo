@@ -15,7 +15,7 @@ routes = web.RouteTableDef()
 async def create(request):
     data = await request.post()
     user_id = data['uid']
-    info = data['info']
+    info = data.get('info', '')
     await user.create(user_id, info)
     return web.Response(text='0')
 
@@ -28,11 +28,11 @@ async def get(request):
 
     fle = await user_follow.all_followees(user_id)
     flr = await user_follow.all_followers(user_id)
-    return web.Response(text=str({
+    return web.json_response({
         'user': u,
         'followees': fle,
         'followers': flr
-    }))
+    })
 
 
 @routes.post('/user/follow')
