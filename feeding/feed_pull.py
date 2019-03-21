@@ -1,7 +1,7 @@
 import logging
 import heapq
 
-from db.db_utils import db_r
+from caching.caching_utils import redis
 from db import user_follow
 from .base_feeder import BaseFeeder
 
@@ -19,7 +19,7 @@ class FeedPull(BaseFeeder):
         '''adds a new tweet to the user's feed list'''
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
-        return db_r.zadd(self.get_key(user_id), {tweet_id: timestamp})
+        return redis.zadd(self.get_key(user_id), {tweet_id: timestamp})
 
     async def get(self, user_id, limit):
         followees = user_follow.all_followees(user_id)
@@ -27,7 +27,7 @@ class FeedPull(BaseFeeder):
         # get @limit feeds from each of the followees
         # then get the newest @limit feeds among them
         for fle in followees:
-            feeds += db_r.zrevrange(self.get_key(fle),
+            feeds += redis.zrevrange(self.get_key(fle),
                                     0, limit, withscores=True)
         feeds = heapq.nlargest(limit, feeds, key=lambda x: x[1])
         return feeds

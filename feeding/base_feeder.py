@@ -1,6 +1,3 @@
-from db.db_utils import db_r
-
-
 class BaseFeeder:
     _prefix = 'twibo'
     prefix = 'base'

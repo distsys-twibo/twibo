@@ -3,8 +3,9 @@ import logging
 
 from aiohttp import web
 
-from utils import config
+from caching import caching_utils
 from db import db_utils
+from utils import config
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -18,6 +19,7 @@ parser.add_argument('--port', default=9990)
 
 if __name__ == '__main__':
     config.init()
+    caching_utils.init_cache(config.conf)
     db_utils.init_db(config.conf)
     import views
 
