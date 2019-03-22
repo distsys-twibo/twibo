@@ -15,13 +15,14 @@ routes = web.RouteTableDef()
 feeder = feeders[conf['feeder']]
 logger.info('feeder is {}'.format(feeder))
 
+
 @routes.post('/tweet/create')
 async def create(request):
     data = await request.post()
     user_id = data['user_id']
     tweet_id = data['tweet_id']
     content = data['content']
-    timestamp = data['ts']
+    timestamp = float(data['ts'])
     t1 = time.time()
     await feeder.create(user_id, tweet_id, content, timestamp)
     t2 = time.time()

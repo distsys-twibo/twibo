@@ -27,6 +27,6 @@ class FeedPull(BaseFeeder):
         # get @limit feeds from each of the followees
         # then get the newest @limit feeds among them
         for fle in followees:
-            feeds += await tweet.get(fle, limit)
+            feeds += await tweet.get_by_user_id(fle, limit)
         feeds = heapq.nlargest(limit, feeds, key=lambda x: x['ts'])
         return feeds

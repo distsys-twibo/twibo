@@ -33,13 +33,23 @@ async def create(user_id, tweet_id, content, timestamp):
     return 0
 
 
-async def get(user_id, limit=50):
-    '''get @user_id's @limit tweets'''
-    logger.debug('user {} limit {}'.format(user_id, limit))
-    cursor = coll.find(
-        {'user_id': user_id},
-        {'_id': False},
-        limit=limit,
-        sort=[('ts', pymongo.DESCENDING)])
+async def get(query, **kwargs):
+    cursor = coll.find(query, {'_id': False}, **kwargs)
     tweets = [t async for t in cursor]
     return tweets
+
+
+async def get_by_user_id(user_id, limit=50):
+    '''get @user_id's @limit tweets'''
+    logger.debug('user {} limit {}'.format(user_id, limit))
+    return get(
+        {'user_id': user_id},
+        limit=limit,
+        sort=[('ts', pymongo.DESCENDING)]
+    )
+
+
+async def get_by_tweet_ids(tweet_ids):
+    return await get({
+        'tweet_id': {'$in': tweet_ids}
+    })
