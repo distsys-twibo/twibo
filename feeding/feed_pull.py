@@ -19,7 +19,6 @@ class FeedPull(BaseFeeder):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
         return await tweet.create(user_id, tweet_id, content, timestamp)
-        # return redis.zadd(self.get_key(user_id), {tweet_id: timestamp})
 
     async def get(self, user_id, limit):
         logger.debug('user_id {} limit {}'.format(user_id, limit))
@@ -31,14 +30,3 @@ class FeedPull(BaseFeeder):
             feeds += await tweet.get(fle, limit)
         feeds = heapq.nlargest(limit, feeds, key=lambda x: x['ts'])
         return feeds
-        # feeds += redis.zrevrange(self.get_key(fle),
-        #                         0, limit, withscores=True)
-
-
-
-class FeedPullCacheAside(FeedPull):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def get(self, user_id, limit):
-        pass
