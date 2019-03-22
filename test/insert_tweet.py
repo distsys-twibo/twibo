@@ -19,16 +19,16 @@ tweets = []
 
 for l in lines:
     sp = l.split('#~#')
-    tid, u, t, c = sp[0], sp[1], sp[2], sp[3]
-    tweets.append((tid, u, t, c))
+    tweet_id, u, t, c = sp[0], sp[1], sp[2], sp[3]
+    tweets.append((tweet_id, u, t, c))
 
 print('{} tweets'.format(len(tweets)))
 
-for tid, u, t, c in tweets:
-    print('post', tid, u, t, c)
+for tweet_id, u, t, c in tweets:
+    print('post', tweet_id, u, t, c)
     requests.post(url_create, data={
-        'tid': tid,
-        'uid': u,
+        'tweet_id': tweet_id,
+        'user_id': u,
         'ts': t,
         'content': c
     })

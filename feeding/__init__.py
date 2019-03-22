@@ -1,5 +1,6 @@
-from .feed_pull import fp
+from . import feed_pull
 
 feeders = {
-    'pull': fp
+    'pull': feed_pull.FeedPull(),
+    'pull-cacheaside': feed_pull.FeedPullCacheAside()
 }

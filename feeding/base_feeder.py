@@ -5,7 +5,7 @@ class BaseFeeder:
     def get_key(self, *args):
         return ':'.join([self._prefix, self.prefix, *args])
 
-    async def create(self, user_id, tweet_id, timestamp):
+    async def create(self, user_id, tweet_id, content, timestamp):
         raise NotImplementedError
 
     async def get(self, user_id, limit):

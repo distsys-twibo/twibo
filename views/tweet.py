@@ -4,13 +4,16 @@ import time
 
 from aiohttp import web
 
-from db import tweet
+from feeding import feeders
+from utils.config import conf
 
 
 logger = logging.getLogger(__name__)
 
 routes = web.RouteTableDef()
 
+feeder = feeders[conf['feeder']]
+logger.info('feeder is {}'.format(feeder))
 
 @routes.post('/tweet/create')
 async def create(request):
@@ -20,7 +23,7 @@ async def create(request):
     content = data['content']
     timestamp = data['ts']
     t1 = time.time()
-    await tweet.create(user_id, tweet_id, content, timestamp)
+    await feeder.create(user_id, tweet_id, content, timestamp)
     t2 = time.time()
     return web.json_response({
         'times': {
@@ -35,7 +38,7 @@ async def get(request):
     user_id = query['user_id']
     limit = int(query.get('limit', 10))
     t1 = time.time()
-    tweets = await tweet.get(user_id, limit)
+    tweets = await feeder.get(user_id, limit)
     t2 = time.time()
     return web.json_response({
         'tweets': tweets,
