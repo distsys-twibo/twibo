@@ -57,20 +57,41 @@ class FeedPush(BaseFeeder):
 
 
 class FeedPushCacheAside(FeedPush):
-    '''
+    """
     Creating a tweet is the same as FeedPush, i.e. write to db.
     When reading, first retrieve tweet_ids from feed list.
     Then first find the tweets in a global cache of tweets (tweet_id -> tweet).
     if not found, find from db, and insert to cache.
     Need to set expire interval; add a parameter in config.
-    '''
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prefix_cache = 'feedpush-cache'  # global cache
-        expire_interval = conf['cache-expire-interval']
+        self.expire_interval = conf['cache-expire-interval']
 
     async def get(self, user_id, limit, **kwargs):
-        pass
+        pop = kwargs.get('pop', False)
+        k = self.get_key(user_id)
+        logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
+        if pop:
+            await self.lock(self.name_feedlock)
+        tweet_ids = await redis.lrange(k, 0, limit - 1, encoding='utf8')
+        if pop:
+            await redis.ltrim(k, len(tweet_ids), -1)
+            await self.unlock(self.name_feedlock)
+        # check if the tweets exist in cache
+        _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
+        tweets = await redis.mget(*_tweet_ids)
+        for _index, each_t in enumerate(tweets):
+            if not each_t:
+                t_id = tweet_ids[_index]
+                t = await tweet.get_by_tweet_id(t_id)
+                json_t = json.dumps(t[0])
+                await redis.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
+                tweets[_index] = t[0]
+        tweets.sort(key=lambda x: x['ts'], reverse=True)
+        return tweets
 
 
 class FeedPushWriteBehind(FeedPushCacheAside):
