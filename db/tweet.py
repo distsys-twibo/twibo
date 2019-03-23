@@ -22,8 +22,11 @@ asyncio.gather(
 )
 
 
+async def create_many(tweets):
+    return await coll.insert_many(tweets)
+
+
 async def create(user_id, tweet_id, content, timestamp):
-    logger.debug('{} {} {}'.format(user_id, tweet_id, timestamp))
     await coll.insert_one({
         'user_id': user_id,
         'tweet_id': tweet_id,
@@ -41,7 +44,6 @@ async def get(query, **kwargs):
 
 def get_by_user_id(user_id, limit=50):
     '''get @user_id's @limit tweets'''
-    logger.debug('user {} limit {}'.format(user_id, limit))
     return get(
         {'user_id': user_id},
         limit=limit,
