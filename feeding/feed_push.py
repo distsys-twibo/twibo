@@ -69,7 +69,7 @@ class FeedPushCacheAside(FeedPush):
         else:
             tweet_ids = await redis.zrevrange(self.get_key(user_id), 0, limit - 1, encoding='utf8')
         # check if the tweets exist in cache
-        tweets = await redis.exists(tweet_ids)
+        tweets = await redis.exists(str(tweet_ids))
         if tweets == 0:
             tweets = await tweet.get_by_tweet_ids(tweet_ids)
             tweets.sort(key=lambda x: x['ts'], reverse=True)

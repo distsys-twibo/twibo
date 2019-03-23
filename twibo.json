@@ -1,10 +1,11 @@
 {
     "redis-host": "localhost",
     "redis-port": 9891,
-    "redis-db": 0,
+    "redis-db": 2,
     "mongo-host": "127.0.0.1",
     "mongo-port": 9881,
-    "mongo-db": "twibo",
-    "feeder": "pull",
-    "write-behind-interval": 5
+    "mongo-db": "twibo-xwt",
+    "feeder": "push-cacheaside",
+    "write-behind-interval": 5,
+    "cache-expire-interval": 20
 }
