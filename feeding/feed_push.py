@@ -68,7 +68,6 @@ class FeedPushCacheAside(FeedPush):
         super().__init__(*args, **kwargs)
         self.prefix_cache = 'feedpush-cache'  # global cache
         self.expire_interval = conf['cache-expire-interval']
-        self.name_feedlock = 'feed-lock'
 
     async def get(self, user_id, limit, **kwargs):
         pop = kwargs.get('pop', False)
