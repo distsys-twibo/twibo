@@ -24,6 +24,7 @@ class FeedPush(BaseFeeder):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.name_feedlock = 'feed-lock'
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
@@ -31,9 +32,11 @@ class FeedPush(BaseFeeder):
         followers = await user_follow.all_followers(user_id)
         t_db = tweet.create(user_id, tweet_id, content, timestamp)
         # add tweet id to the feed list of all followers
+        await self.lock(self.name_feedlock)
         t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(t_db, *t_feedlist)
+        await self.unlock(self.name_feedlock)
         return 0
 
     async def get(self, user_id, limit, **kwargs):
@@ -41,9 +44,12 @@ class FeedPush(BaseFeeder):
         pop = kwargs.get('pop', False)
         k = self.get_key(user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
+        if pop:
+            await self.lock(self.name_feedlock)
         tweet_ids = await redis.lrange(k, 0, limit - 1, encoding='utf8')
         if pop:
             await redis.ltrim(k, len(tweet_ids), -1)
+            await self.unlock(self.name_feedlock)
         tweets = await tweet.get_by_tweet_ids(tweet_ids)
         tweets.sort(key=lambda x: x['ts'], reverse=True)
         return tweets
@@ -88,7 +94,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             now = time.time()
             elapsed = now - t0
             await asyncio.sleep(self.interval - elapsed)
-            lock_acquired = await self.lock(self.name_persistlock)
+            lock_acquired = await self.lock(self.name_persistlock, blocking=False)
             if not lock_acquired:
                 await asyncio.sleep(random.random() * 0.5 * self.interval)
             else:
@@ -115,7 +121,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                         break
                 logger.debug('persisted {} tweets'.format(total))
                 elapsed = now - t0
-                await self.unlock(self.name_persistlock, after=max(0, 0.9*(self.interval-elapsed)))
+                await self.unlock(self.name_persistlock, after=0.9*(self.interval-elapsed))
 
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
@@ -138,7 +144,9 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         # add tweet id to the feed list of all followers
         followers = await user_follow.all_followers(user_id)
         # add tweets to the queue waiting to be persisted
+        await self.lock(self.name_feedlock)
         t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(*t_feedlist)
+        await self.unlock(self.name_feedlock)
         return 0
