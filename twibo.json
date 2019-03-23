@@ -6,6 +6,7 @@
     "mongo-port": 9881,
     "mongo-db": "twibo-xwt",
     "feeder": "push-cacheaside",
+    "cache-expire-interval": 15,
     "write-behind-interval": 5,
-    "cache-expire-interval": 20
+    "write-behind-batchsize": 100
 }

@@ -3,6 +3,7 @@ import logging
 
 from aiohttp import web
 
+import background
 from caching import caching_utils
 from db import db_utils
 from utils import config
@@ -29,6 +30,8 @@ if __name__ == '__main__':
         *views.tweet.routes,
         *views.user.routes
     ])
+
+    app.on_startup.append(background.add_tasks)
 
     args = parser.parse_args()
     web.run_app(app, path=args.path, port=args.port)

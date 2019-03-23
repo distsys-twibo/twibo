@@ -1,7 +1,6 @@
 import logging
 import heapq
 
-from caching.caching_utils import redis
 from db import tweet, user_follow
 from .base_feeder import BaseFeeder
 
