@@ -68,23 +68,29 @@ class FeedPushCacheAside(FeedPush):
         super().__init__(*args, **kwargs)
         self.prefix_cache = 'feedpush-cache'  # global cache
         self.expire_interval = conf['cache-expire-interval']
+        self.name_feedlock = 'feed-lock'
 
     async def get(self, user_id, limit, **kwargs):
         pop = kwargs.get('pop', False)
         k = self.get_key(user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
         if pop:
-            tweet_ids = await redis.execute(b'ZPOPMAX', k, limit, encoding='utf8')
-        else:
-            tweet_ids = await redis.zrevrange(self.get_key(user_id), 0, limit - 1, encoding='utf8')
+            await self.lock(self.name_feedlock)
+        tweet_ids = await redis.lrange(k, 0, limit - 1, encoding='utf8')
+        if pop:
+            await redis.ltrim(k, len(tweet_ids), -1)
+            await self.unlock(self.name_feedlock)
         # check if the tweets exist in cache
-        tweets = await redis.exists(str(tweet_ids))
-        if tweets == 0:
-            tweets = await tweet.get_by_tweet_ids(tweet_ids)
-            tweets.sort(key=lambda x: x['ts'], reverse=True)
-            await redis.lpush(tweet_ids, *tweets)
-            await redis.expire(tweet_ids, self.expire_interval)
-        tweets = await redis.lrange(tweet_ids, 0, limit)
+        _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
+        tweets = await redis.mget(*_tweet_ids)
+        for _index, each_t in enumerate(tweets):
+            if not each_t:
+                t_id = tweet_ids[_index]
+                t = await tweet.get_by_tweet_id(t_id)
+                json_t = json.dumps(t[0])
+                await redis.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
+                tweets[_index] = t[0]
+        tweets.sort(key=lambda x: x['ts'], reverse=True)
         return tweets
 
 
