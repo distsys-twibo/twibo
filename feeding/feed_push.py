@@ -2,6 +2,7 @@ import asyncio
 import logging
 import heapq
 import json
+import random
 import time
 
 from caching.caching_utils import redis
@@ -75,7 +76,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.key_newtweets = self.get_key('feedpush-newtweets')
-        expire = conf['cache-expire-interval']
+        self.name_persistlock = 'persist-lock'
         self.interval = conf['write-behind-interval']
         self.batchsize = conf['write-behind-batchsize']
         self.add_background_task('push-writebehind-persistence_worker', self._persistence_worker)
@@ -87,28 +88,34 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             now = time.time()
             elapsed = now - t0
             await asyncio.sleep(self.interval - elapsed)
-            t0 = time.time()
-            logger.debug('running')
-            total = 0
-            while 1:
-                # find all tweets whose score(ts) > last_latest
-                new_tweet_ids = await redis.lrange(self.key_newtweets, 0, self.batchsize - 1, encoding='utf8')
-                n = len(new_tweet_ids)
-                if n == 0:
-                    break
-                # retrieve tweet content
-                new_tweet_keys = (self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids)
-                new_tweets = await redis.mget(*new_tweet_keys, encoding='utf8')
-                # write them to db
-                new_tweets = map(json.loads, new_tweets)
-                asyncio.gather(
-                    tweet.create_many(new_tweets),
-                    redis.ltrim(self.key_newtweets, n, -1)
-                )
-                total += n
-                if n < self.batchsize:
-                    break
-            logger.debug('persisted {} tweets'.format(total))
+            lock_acquired = await self.lock(self.name_persistlock)
+            if not lock_acquired:
+                await asyncio.sleep(random.random() * 0.5 * self.interval)
+            else:
+                t0 = time.time()
+                logger.debug('running')
+                total = 0
+                while 1:
+                    # find all tweets whose score(ts) > last_latest
+                    new_tweet_ids = await redis.lrange(self.key_newtweets, 0, self.batchsize - 1, encoding='utf8')
+                    n = len(new_tweet_ids)
+                    if n == 0:
+                        break
+                    # retrieve tweet content
+                    new_tweet_keys = (self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids)
+                    new_tweets = await redis.mget(*new_tweet_keys, encoding='utf8')
+                    # write them to db
+                    new_tweets = map(json.loads, new_tweets)
+                    asyncio.gather(
+                        tweet.create_many(new_tweets),
+                        redis.ltrim(self.key_newtweets, n, -1)
+                    )
+                    total += n
+                    if n < self.batchsize:
+                        break
+                logger.debug('persisted {} tweets'.format(total))
+                elapsed = now - t0
+                await self.unlock(self.name_persistlock, after=max(0, 0.9*(self.interval-elapsed)))
 
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
