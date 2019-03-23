@@ -101,8 +101,10 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                 new_tweets = await redis.mget(*new_tweet_keys, encoding='utf8')
                 # write them to db
                 new_tweets = map(json.loads, new_tweets)
-                await tweet.create_many(new_tweets)
-                await redis.ltrim(self.key_newtweets, n, -1)
+                asyncio.gather(
+                    tweet.create_many(new_tweets),
+                    redis.ltrim(self.key_newtweets, n, -1)
+                )
                 total += n
                 if n < self.batchsize:
                     break
