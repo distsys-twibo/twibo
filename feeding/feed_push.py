@@ -32,6 +32,7 @@ class FeedPush(BaseFeeder):
         followers = await user_follow.all_followers(user_id)
         t_db = tweet.create(user_id, tweet_id, content, timestamp)
         # add tweet id to the feed list of all followers
+        # TODO: this lock is too big; maybe only set a per-user lock
         await self.lock(self.name_feedlock)
         t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
                         for flr in followers)
@@ -121,6 +122,8 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                         break
                 logger.debug('persisted {} tweets'.format(total))
                 elapsed = now - t0
+                # unlock after a period so other processes won't persist again
+                # shortly after this process finishes
                 await self.unlock(self.name_persistlock, after=0.9*(self.interval-elapsed))
 
 
