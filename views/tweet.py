@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 routes = web.RouteTableDef()
 
-feeder = feeders[conf['feeder']]
+feeder = feeders[conf['feeder']]()
 logger.info('feeder is {}'.format(feeder))
 
 
