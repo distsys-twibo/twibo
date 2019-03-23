@@ -38,8 +38,9 @@ async def get(request):
     query = request.rel_url.query
     user_id = query['user_id']
     limit = int(query.get('limit', 10))
+    pop = bool(int(query.get('pop', 0)))
     t1 = time.time()
-    tweets = await feeder.get(user_id, limit)
+    tweets = await feeder.get(user_id, limit, pop=pop)
     t2 = time.time()
     return web.json_response({
         'tweets': tweets,

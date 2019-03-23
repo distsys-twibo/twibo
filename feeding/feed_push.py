@@ -16,7 +16,7 @@ class FeedPush(BaseFeeder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def create(self, user_id, tweet_id, content, timestamp):
+    async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
         followers = await user_follow.all_followers(user_id)
@@ -27,10 +27,15 @@ class FeedPush(BaseFeeder):
         await asyncio.gather(t_db, *t_feedlist)
         return 0
 
-    async def get(self, user_id, limit, pop=False):
-        logger.debug('user_id {} limit {}'.format(user_id, limit))
+    async def get(self, user_id, limit, **kwargs):
         # get the ids of latest @limit tweets from the user's feed list
-        tweet_ids = await redis.zrevrange(self.get_key(user_id), 0, limit)
-        # get the actual tweet
+        pop = kwargs.get('pop', False)
+        k = self.get_key(user_id)
+        logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
+        if pop:
+            tweet_ids = await redis.execute(b'ZPOPMAX', k, limit, encoding='utf8')
+        else:
+            tweet_ids = await redis.zrevrange(self.get_key(user_id), 0, limit - 1, encoding='utf8')
         tweets = await tweet.get_by_tweet_ids(tweet_ids)
+        tweets.sort(key=lambda x: x['ts'], reverse=True)
         return tweets

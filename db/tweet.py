@@ -39,7 +39,7 @@ async def get(query, **kwargs):
     return tweets
 
 
-async def get_by_user_id(user_id, limit=50):
+def get_by_user_id(user_id, limit=50):
     '''get @user_id's @limit tweets'''
     logger.debug('user {} limit {}'.format(user_id, limit))
     return get(
@@ -49,7 +49,7 @@ async def get_by_user_id(user_id, limit=50):
     )
 
 
-async def get_by_tweet_ids(tweet_ids):
-    return await get({
+def get_by_tweet_ids(tweet_ids):
+    return get({
         'tweet_id': {'$in': tweet_ids}
     })

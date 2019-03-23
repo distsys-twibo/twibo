@@ -15,12 +15,12 @@ class FeedPull(BaseFeeder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def create(self, user_id, tweet_id, content, timestamp):
+    async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
         return await tweet.create(user_id, tweet_id, content, timestamp)
 
-    async def get(self, user_id, limit):
+    async def get(self, user_id, limit, **kwargs):
         logger.debug('user_id {} limit {}'.format(user_id, limit))
         followees = await user_follow.all_followees(user_id)
         feeds = []
