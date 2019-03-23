@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import heapq
+import json
 import time
 
 from caching.caching_utils import redis
@@ -76,12 +77,14 @@ class FeedPushWriteBehind(FeedPushCacheAside):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prefix_track = 'feedpush-track'
+
         expire = conf['cache-expire-interval']
         interval = conf['write-behind-interval']
         assert interval * 2 < expire, 'cache-expire-interval must be at least 2 times greater than write-behind-interval'
         logger.debug('launching write-behind worker with interval {}'.format(interval))
         loop = asyncio.get_event_loop()
         loop.create_task(self._persistence_worker(interval))
+
 
     async def _persistence_worker(self, interval):
         t0 = time.time()
@@ -101,9 +104,16 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         '''
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
-        followers = await user_follow.all_followers(user_id)
+        # add tweet to global cache
+        await redis.set(self.get_key(self.prefix_cache, user_id), json.dumps({
+            'user_id': user_id,
+            'tweet_id': tweet_id,
+            'content': content,
+            'ts': timestamp
+        }))
         # add tweet id to the feed list of all followers
+        followers = await user_follow.all_followers(user_id)
         t_feedlist = (redis.zadd(self.get_key(flr), timestamp, tweet_id)
                         for flr in followers)
-        await asyncio.gather(t_feedlist)
+        await asyncio.gather(*t_feedlist)
         return 0
