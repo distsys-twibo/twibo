@@ -16,8 +16,12 @@ class BaseFeeder:
         # non-blocking; returns true if locked
         return await redis.set(self.get_key(lockname), '1', exist=redis.SET_IF_NOT_EXIST)
 
-    async def unlock(self, lockname):
-        return await redis.delete(self.get_key(lockname))
+    async def unlock(self, lockname, after=0):
+        # unlock a lock. if after > 0, then unlock after @after seconds
+        if after == 0:
+            return await redis.delete(self.get_key(lockname))
+        else:
+            return await redis.set(self.get_key(lockname), '2', expire=after)
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         raise NotImplementedError
