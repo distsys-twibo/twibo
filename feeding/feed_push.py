@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import heapq
+import time
 
 from caching.caching_utils import redis
 from db import tweet, user_follow
@@ -51,10 +52,17 @@ class FeedPushCacheAside(FeedPush):
     '''
     Creating a tweet is the same as FeedPush, i.e. write to db.
     When reading, first retrieve tweet_ids from feed list.
-    Then first find the tweets in cache;
+    Then first find the tweets in a global cache of tweets (tweet_id -> tweet).
+    The global cache should be a
     if not found, find from db, and insert to cache.
     Need to set expire interval; add a parameter in config.
     '''
+    prefix_cache = 'feedpush-cache'  # global cache
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        expire_interval = conf['cache-expire-interval']
+
     async def get(self, user_id, limit, **kwargs):
         pass
 
@@ -67,15 +75,23 @@ class FeedPushWriteBehind(FeedPushCacheAside):
     '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        expire = conf['cache-expire-interval']
         interval = conf['write-behind-interval']
+        assert interval * 2 < expire, 'cache-expire-interval must be at least 2 times greater than write-behind-interval'
         logger.debug('launching write-behind worker with interval {}'.format(interval))
         loop = asyncio.get_event_loop()
         loop.create_task(self._persistence_worker(interval))
 
     async def _persistence_worker(self, interval):
+        t0 = time.time()
         while 1:
-            await asyncio.sleep(interval)
+            now = time.time()
+            elapsed = now - t0
+            if elapsed <= interval:
+                await asyncio.sleep(interval - elapsed)
+            t0 = now
             logger.debug('write behind worker running')
+
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         '''
