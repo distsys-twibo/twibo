@@ -55,3 +55,9 @@ def get_by_tweet_ids(tweet_ids):
     return get({
         'tweet_id': {'$in': tweet_ids}
     })
+
+
+def get_by_tweet_id(tweet_id):
+    return get({
+        'tweet_id': tweet_id
+    })
