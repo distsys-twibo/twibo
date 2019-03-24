@@ -11,7 +11,7 @@ def parse_lines(lines):
     return ret
 
 
-def normalize_lenth(activities, min_len, max_len):
+def normalize_length(activities, min_len, max_len):
     for a in activities:
         if a[1] == 'Publish':
             l = a[3]
