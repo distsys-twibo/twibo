@@ -43,3 +43,9 @@ class FeedPull(BaseFeeder):
         timer['db_get_feeds'] = t2 - t1
         timer['sort'] = t3 - t2
         return feeds
+
+
+# There's no FeedPullCacheAside because caching tweets requires that we first
+# know which tweet ids are required/wanted,
+# which requires a per-user feed list,
+# which doesn't exist...
