@@ -24,7 +24,7 @@ def main():
     num = len(activities)
     print('data loaded. {} activities'.format(num))
     print('normalize content length')
-    utils.normalize_lenth(activities, 1, 400)
+    utils.normalize_length(activities, 1, 400)
 
     tid_prefix = socket.gethostname()
     print('begin. prefix of tweet_id is {}'.format(tid_prefix))
