@@ -23,7 +23,7 @@ def normalize_length(activities, min_len, max_len):
 
 chars = string.ascii_letters + string.digits
 def random_string(length):
-    return ''.join(random.choices(chars, k=length))
+    return ''.join(random.choice(chars) for _ in range(length))
 
 
 def save_timer(calcers, timer):
@@ -40,7 +40,7 @@ def print_calcers(calcers):
 
 class Calcer:
     def __init__(self, *args, **kwargs):
-        self.val = 0
+        self.val = 0.0
         self.count = 0
 
     def add(self, v):
