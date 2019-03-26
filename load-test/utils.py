@@ -4,21 +4,29 @@ import string
 import sys
 
 
+def parse_line(l):
+    ts, action, user_id, tlen = l.strip().split('\t')
+    return [float(ts), action, user_id, int(tlen)]
+
+
 def parse_lines(lines):
     ret = []
     for l in lines:
-        ts, action, user_id, tlen = l.split('\t')
-        ret.append([float(ts), action, user_id, int(tlen)])
+        ret.append(parse_line(l))
     return ret
+
+
+def norm_act(a, min_len, max_len):
+    if a[1] == 'Publish':
+        l = a[3]
+        while l > max_len:
+            l //= 5
+        a[3] = l
 
 
 def normalize_length(activities, min_len, max_len):
     for a in activities:
-        if a[1] == 'Publish':
-            l = a[3]
-            while l > max_len:
-                l //= 5
-            a[3] = l
+        norm_act(a)
 
 
 chars = string.ascii_letters + string.digits

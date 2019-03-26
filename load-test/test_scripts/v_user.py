@@ -18,19 +18,17 @@ activity_file = ''
 # max length of a tweet
 t_maxlen = 400
 
+f = open(activity_file)
+
+
 class Transaction(object):
     def __init__(self):
-        with open(activity_file) as f:
-            lines = f.read().splitlines()
-        self.activities = utils.parse_lines(lines)
-        self.len = len(self.activities)
-        utils.normalize_length(self.activities, 1, t_maxlen)
         self.tid_prefix = socket.gethostname()
-        self.i = 0
 
     def next_act(self):
-        act = self.activities[self.i]
-        self.i = (self.i + 1) % self.len
+        l = f.readline()
+        act = utils.parse_line(l)
+        utils.norm_act(act, 1, t_maxlen)
         return act
 
     def run(self):
