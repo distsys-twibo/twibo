@@ -39,9 +39,9 @@ class FeedPull(BaseFeeder):
         t2 = time.time()
         feeds = heapq.nlargest(limit, feeds, key=lambda x: x['ts'])
         t3 = time.time()
-        timer['db_get_rel_followee'] = t1 - t0
+        timer['db_get_followee'] = t1 - t0
         timer['db_get_feeds'] = t2 - t1
-        timer['sort'] = t3 - t2
+        timer['op_sort'] = t3 - t2
         return feeds
 
 

@@ -29,15 +29,23 @@ class FeedPush(BaseFeeder):
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
+        timer = kwargs.get('timer', {})
+        t0 = time.time()
         followers = await user_follow.all_followers(user_id)
+        t1 = time.time()
         t_db = tweet.create(user_id, tweet_id, content, timestamp)
         # add tweet id to the feed list of all followers
         # TODO: this lock is too big; maybe only set a per-user lock
         await self.lock(self.name_feedlock)
+        t2 = time.time()
         t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(t_db, *t_feedlist)
+        t3 = time.time()
         await self.unlock(self.name_feedlock)
+        timer['db_get_follower'] = t1 - t0
+        timer['op_lock'] = t2 - t1
+        timer['other_create_and_push_feedlist'] = t3 - t2
         return 0
 
     async def get(self, user_id, limit, **kwargs):
@@ -45,14 +53,26 @@ class FeedPush(BaseFeeder):
         pop = kwargs.get('pop', False)
         k = self.get_key(user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
+        timer = kwargs.get('timer', {})
+        t0 = time.time()
         if pop:
             await self.lock(self.name_feedlock)
+        t1 = time.time()
         tweet_ids = await redis.lrange(k, 0, limit - 1, encoding='utf8')
+        t2 = time.time()
         if pop:
             await redis.ltrim(k, len(tweet_ids), -1)
             await self.unlock(self.name_feedlock)
+        t3 = time.time()
         tweets = await tweet.get_by_tweet_ids(tweet_ids)
+        t4 = time.time()
         tweets.sort(key=lambda x: x['ts'], reverse=True)
+        t5 = time.time()
+        timer['op_lock'] = t1 - t0
+        timer['cache_get_tweet_ids'] = t2 - t1
+        timer['cache_pop_tweets'] = t3 - t2
+        timer['db_get_tweet'] = t4 - t3
+        timer['op_sort'] = t5 - t4
         return tweets
 
 
@@ -74,23 +94,50 @@ class FeedPushCacheAside(FeedPush):
         pop = kwargs.get('pop', False)
         k = self.get_key(user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
+        timer = kwargs.get('timer', {})
+        t0 = time.time()
         if pop:
             await self.lock(self.name_feedlock)
+        t1 = time.time()
         tweet_ids = await redis.lrange(k, 0, limit - 1, encoding='utf8')
+        t2 = time.time()
         if pop:
             await redis.ltrim(k, len(tweet_ids), -1)
             await self.unlock(self.name_feedlock)
+        t3 = time.time()
         # check if the tweets exist in cache
-        _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
-        tweets = await redis.mget(*_tweet_ids)
+        tweets = []
+        n = len(tweet_ids)
+        if n != 0:
+            _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
+            tweets = await redis.mget(*_tweet_ids)
+        t4 = time.time()
+        t_get_tweet = 0
+        t_set_cache = 0
         for _index, each_t in enumerate(tweets):
             if not each_t:
                 t_id = tweet_ids[_index]
+                tt0 = time.time()
                 t = await tweet.get_by_tweet_id(t_id)
+                tt1 = time.time()
                 json_t = json.dumps(t[0])
                 await redis.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
+                tt2 = time.time()
                 tweets[_index] = t[0]
+                t_get_tweet += tt1 - tt0
+                t_set_cache += tt2 - tt1
+        t5 = time.time()
         tweets.sort(key=lambda x: x['ts'], reverse=True)
+        t6 = time.time()
+
+        timer['op_lock'] = t1 - t0
+        timer['cache_get_tweet_ids'] = t2 - t1
+        timer['cache_pop_tweets'] = t3 - t2
+        timer['cache_get_tweet'] = t4 - t3
+        timer['db_get_tweet'] = t_get_tweet
+        timer['cache_set_tweet'] = t_set_cache
+        timer['op_sort'] = t6 - t5
+
         return tweets
 
 
@@ -141,8 +188,8 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                     total += n
                     if n < self.batchsize:
                         break
-                logger.debug('persisted {} tweets'.format(total))
-                elapsed = now - t0
+                elapsed = time.time() - t0
+                logger.debug('persisted {} tweets. time {}'.format(total, elapsed))
                 # unlock after a period so other processes won't persist again
                 # shortly after this process finishes
                 await self.unlock(self.name_persistlock, after=0.9*(self.interval-elapsed))
@@ -155,6 +202,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         '''
         logger.debug('user_id {} tweet_id {} ts {}'.format(
             user_id, tweet_id, timestamp))
+        timer = kwargs.get('timer', {})
         # add tweet to global cache
         twt = json.dumps({
             'user_id': user_id,
@@ -162,15 +210,24 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             'content': content,
             'ts': timestamp
         })
+        t0 = time.time()
         t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt)
         t_add_track = redis.rpush(self.key_newtweets, tweet_id)
         await asyncio.gather(t_add_global, t_add_track)
+        t1 = time.time()
         # add tweet id to the feed list of all followers
         followers = await user_follow.all_followers(user_id)
+        t2 = time.time()
         # add tweets to the queue waiting to be persisted
         await self.lock(self.name_feedlock)
+        t3 = time.time()
         t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(*t_feedlist)
+        t4 = time.time()
         await self.unlock(self.name_feedlock)
+        timer['cache_set_tweet'] = t1 - t0
+        timer['db_get_follower'] = t2 - t1
+        timer['op_lock'] = t3 - t2
+        timer['cache_push_feedlist'] = t4 - t3
         return 0
