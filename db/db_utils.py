@@ -15,8 +15,14 @@ def init_db(conf):
     host = conf['mongo-host']
     port = conf['mongo-port']
     mdb = conf['mongo-db']
-    logger.debug('initializing db(mongo): {} {} {}'.format(host, port, mdb))
-    db = motor.motor_asyncio.AsyncIOMotorClient(host, port)[mdb]
+    conn_str = conf['mongo-str']
+    if conn_str:
+        logger.debug('initializing db(mongo): {}'.format(conn_str))
+        client = motor.motor_asyncio.AsyncIOMotorClient(conn_str)
+    else:
+        logger.debug('initializing db(mongo): {} {} {}'.format(host, port, mdb))
+        client = motor.motor_asyncio.AsyncIOMotorClient(host, port)
+    db = client[mdb]
 
 
 async def exists(coll, query):

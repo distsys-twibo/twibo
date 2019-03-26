@@ -5,6 +5,7 @@
     "mongo-host": "127.0.0.1",
     "mongo-port": 9881,
     "mongo-db": "twibo",
+    "mongo-str": "",
     "feeder": "pull",
     "cache-expire-interval": 15,
     "write-behind-interval": 5,
