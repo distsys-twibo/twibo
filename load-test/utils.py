@@ -23,3 +23,19 @@ def normalize_length(activities, min_len, max_len):
 chars = string.ascii_letters + string.digits
 def random_string(length):
     return ''.join(random.choices(chars, k=length))
+
+
+class Calcer:
+    def __init__(self, *args, **kwargs):
+        self.val = 0
+        self.count = 0
+
+    def add(self, v):
+        if v is not None:
+            self.val += v
+            self.count += 1
+
+    def avg(self):
+        if self.count != 0:
+            return self.val / self.count
+        return -1
