@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 parser = argparse.ArgumentParser(description="aiohttp server example")
 parser.add_argument('--path', default=None)
-parser.add_argument('--port', default=9990)
+parser.add_argument('--port', default=None)
 
 
 if __name__ == '__main__':
