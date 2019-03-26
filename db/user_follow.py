@@ -43,10 +43,12 @@ async def is_followed_by(user_id, target):
 async def all_followees(user_id):
     cursor = coll.find({'user_id': user_id})
     ret = [f['target'] async for f in cursor]
+    logger.debug('{} has {} followees'.format(user_id, len(ret)))
     return ret
 
 
 async def all_followers(user_id):
     cursor = coll.find({'target': user_id})
     ret = [f['user_id'] async for f in cursor]
+    logger.debug('{} has {} followers'.format(user_id, len(ret)))
     return ret

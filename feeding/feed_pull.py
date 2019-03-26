@@ -16,8 +16,6 @@ class FeedPull(BaseFeeder):
         super().__init__(*args, **kwargs)
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
-        logger.debug('user_id {} tweet_id {} ts {}'.format(
-            user_id, tweet_id, timestamp))
         timer = kwargs.get('timer', {})
         t0 = time.time()
         ret = await tweet.create(user_id, tweet_id, content, timestamp)
@@ -26,7 +24,6 @@ class FeedPull(BaseFeeder):
         return ret
 
     async def get(self, user_id, limit, **kwargs):
-        logger.debug('user_id {} limit {}'.format(user_id, limit))
         timer = kwargs.get('timer', {})
         t0 = time.time()
         followees = await user_follow.all_followees(user_id)
