@@ -32,10 +32,10 @@ def save_timer(calcers, timer):
 
 
 def print_calcers(calcers):
-    print('average times')
     calcers = sorted(calcers.items(), key=lambda x: x[0])
     for n, c in calcers:
-        print('{}: {:.8f}'.format(n, c.avg()))
+        avg = c.avg()
+        print('{}:{}:{:.2f}:{:.8f}'.format(n, c.count, 1 / (avg+1e-10), avg))
 
 
 class Calcer:
