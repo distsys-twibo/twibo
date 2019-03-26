@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pprint import pprint
 import sys
 import socket
@@ -24,16 +25,13 @@ def main():
     activities = utils.parse_lines(lines)
     num = len(activities)
     print('data loaded. {} activities'.format(num))
-    print('normalize content length')
     utils.normalize_length(activities, 1, 400)
 
     tid_prefix = socket.gethostname()
     print('begin. prefix of tweet_id is {}'.format(tid_prefix))
     t0 = time.time()
     c = 0
-    cal_create = utils.Calcer()
-    cal_db_get_feeds = utils.Calcer()
-    cal_db_get_rel_followee = utils.Calcer()
+    calcers = defaultdict(utils.Calcer)
     for ts, action, user_id, tlen in activities:
         if action == 'Retrieve':
             resp = requests.get(url_get, params={
@@ -43,23 +41,21 @@ def main():
             })
         else:
             resp = requests.post(url_create, data={
-                'tweet_id': ts,
+                'tweet_id': tid_prefix + '-' + str(ts),
                 'user_id': user_id,
                 'ts': ts,
                 'content': utils.random_string(tlen)
             })
         respj = resp.json()
         # pprint(respj)
-        cal_create.add(respj['timer'].get('create', None))
-        cal_db_get_feeds.add(respj['timer'].get('db_get_feeds', None))
-        cal_db_get_rel_followee.add(respj['timer'].get('db_get_rel_followee', None))
+        utils.save_timer(calcers, respj['timer'])
         c += 1
         if c % 100 == 0:
-            print(time.time() - t0, c, c / (time.time() - t0))
+            print('progress:', time.time() - t0, c, c / (time.time() - t0))
     t999 = time.time()
     duration = t999 - t0
     print('finished. {:.2f}, {:.2f}/s, {:.5f}/req'.format(duration, num / duration, duration / num))
-    print('create {:.8f} db_get_feeds {:.8f}, db_get_rel_followee {:.8f}'.format(cal_create.avg(), cal_db_get_feeds.avg(), cal_db_get_rel_followee.avg()))
+    utils.print_calcers(calcers)
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,4 @@
+from collections import defaultdict
 import random
 import string
 import sys
@@ -23,6 +24,18 @@ def normalize_length(activities, min_len, max_len):
 chars = string.ascii_letters + string.digits
 def random_string(length):
     return ''.join(random.choices(chars, k=length))
+
+
+def save_timer(calcers, timer):
+    for k, v in timer.items():
+        calcers[k].add(v)
+
+
+def print_calcers(calcers):
+    print('average times')
+    calcers = sorted(calcers.items(), key=lambda x: x[0])
+    for n, c in calcers:
+        print('{}: {:.8f}'.format(n, c.avg()))
 
 
 class Calcer:
