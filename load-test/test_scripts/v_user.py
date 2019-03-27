@@ -45,7 +45,7 @@ class Transaction(object):
                 self.custom_timers['get_{}'.format(k)] = v
         else:
             resp = self.s.post(url_create, data={
-                'tweet_id': self.tid_prefix + '-' + str(ts),
+                'tweet_id': self.tid_prefix + '-' + str(ts) + '-' + utils.random_string(6),
                 'user_id': user_id,
                 'ts': ts,
                 'content': utils.random_string(tlen)
