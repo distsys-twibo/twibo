@@ -41,6 +41,12 @@ async def get(query, **kwargs):
     tweets = [t async for t in cursor]
     return tweets
 
+def get_by_user_ids(user_ids, limit=50):
+    return get(
+        {'user_id': {'$in': user_ids}},
+        limit=limit,
+        sort=[('ts', pymongo.DESCENDING)]
+    )
 
 def get_by_user_id(user_id, limit=50):
     '''get @user_id's @limit tweets'''

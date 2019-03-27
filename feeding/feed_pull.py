@@ -28,17 +28,18 @@ class FeedPull(BaseFeeder):
         t0 = time.time()
         followees = await user_follow.all_followees(user_id)
         t1 = time.time()
-        feeds = []
         # get @limit feeds from each of the followees
         # then get the newest @limit feeds among them
-        for fle in followees:
-            feeds += await tweet.get_by_user_id(fle, limit)
+        # feeds = []
+        # for fle in followees:
+        #     feeds += await tweet.get_by_user_id(fle, limit)
+        feeds = await tweet.get_by_user_ids(followees, limit)
         t2 = time.time()
-        feeds = heapq.nlargest(limit, feeds, key=lambda x: x['ts'])
-        t3 = time.time()
+        # feeds = heapq.nlargest(limit, feeds, key=lambda x: x['ts'])
+        # t3 = time.time()
         timer['db_get_followee'] = t1 - t0
         timer['db_get_feeds'] = t2 - t1
-        timer['op_sort'] = t3 - t2
+        # timer['op_sort'] = t3 - t2
         return feeds
 
 
