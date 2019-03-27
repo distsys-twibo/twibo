@@ -32,6 +32,7 @@ class Transaction(object):
         return act
 
     def run(self):
+        self.custom_timers = {}
         ts, action, user_id, tlen = self.next_act()
         if action == 'Retrieve':
             resp = requests.get(url_get, params={
