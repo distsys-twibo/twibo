@@ -180,13 +180,15 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                     if n == 0:
                         break
                     # retrieve tweet content
-                    new_tweet_keys = (self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids)
+                    new_tweet_keys = [self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids]
                     new_tweets = await redis.mget(*new_tweet_keys, encoding='utf8')
+                    t_expire = (redis.expire(k, self.expire_interval) for k in new_tweet_keys)
                     # write them to db
                     new_tweets = map(json.loads, new_tweets)
                     asyncio.gather(
                         tweet.create_many(new_tweets),
-                        redis.ltrim(self.key_newtweets, n, -1)
+                        redis.ltrim(self.key_newtweets, n, -1),
+                        *t_expire
                     )
                     total += n
                     if n < self.batchsize:
@@ -214,7 +216,8 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             'ts': timestamp
         })
         t0 = time.time()
-        t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt, expire=self.expire_interval)
+        # only set expire after the tweet is persisted
+        t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt)
         t_add_track = redis.rpush(self.key_newtweets, tweet_id)
         await asyncio.gather(t_add_global, t_add_track)
         t1 = time.time()
