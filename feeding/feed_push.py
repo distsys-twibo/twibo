@@ -25,6 +25,7 @@ class FeedPush(BaseFeeder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name_feedlock = 'feed-lock'
+        self.prefix_feedlist = 'feed-list'
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
@@ -38,7 +39,7 @@ class FeedPush(BaseFeeder):
         # TODO: this lock is too big; maybe only set a per-user lock
         await self.lock(self.name_feedlock)
         t2 = time.time()
-        t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
+        t_feedlist = (redis.lpush(self.get_key(self.prefix_feedlist, flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(t_db, *t_feedlist)
         t3 = time.time()
@@ -51,7 +52,7 @@ class FeedPush(BaseFeeder):
     async def get(self, user_id, limit, **kwargs):
         # get the ids of latest @limit tweets from the user's feed list
         pop = kwargs.get('pop', False)
-        k = self.get_key(user_id)
+        k = self.get_key(self.prefix_feedlist, user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
         timer = kwargs.get('timer', {})
         t0 = time.time()
@@ -92,7 +93,7 @@ class FeedPushCacheAside(FeedPush):
 
     async def get(self, user_id, limit, **kwargs):
         pop = kwargs.get('pop', False)
-        k = self.get_key(user_id)
+        k = self.get_key(self.prefix_feedlist, user_id)
         logger.debug('user_id {} limit {} redis key {} pop {}'.format(user_id, limit, k, pop))
         timer = kwargs.get('timer', {})
         t0 = time.time()
@@ -213,7 +214,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             'ts': timestamp
         })
         t0 = time.time()
-        t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt)
+        t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt, expire=self.expire_interval)
         t_add_track = redis.rpush(self.key_newtweets, tweet_id)
         await asyncio.gather(t_add_global, t_add_track)
         t1 = time.time()
@@ -223,7 +224,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         # add tweets to the queue waiting to be persisted
         await self.lock(self.name_feedlock)
         t3 = time.time()
-        t_feedlist = (redis.lpush(self.get_key(flr), tweet_id)
+        t_feedlist = (redis.lpush(self.get_key(self.prefix_feedlist, flr), tweet_id)
                         for flr in followers)
         await asyncio.gather(*t_feedlist)
         t4 = time.time()
