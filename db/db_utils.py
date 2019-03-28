@@ -17,10 +17,10 @@ def init_db(conf):
     mdb = conf['mongo-db']
     conn_str = conf['mongo-str']
     if conn_str:
-        logger.debug('initializing db(mongo): {}'.format(conn_str))
+        logger.warn('initializing db(mongo): {}'.format(conn_str))
         client = motor.motor_asyncio.AsyncIOMotorClient(conn_str)
     else:
-        logger.debug('initializing db(mongo): {} {} {}'.format(host, port, mdb))
+        logger.warn('initializing db(mongo): {} {} {}'.format(host, port, mdb))
         client = motor.motor_asyncio.AsyncIOMotorClient(host, port)
     db = client[mdb]
 

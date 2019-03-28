@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 routes = web.RouteTableDef()
 
 feeder = feeders[conf['feeder']]()
-logger.info('feeder is {}'.format(feeder))
+logger.warn('feeder is {}'.format(feeder))
 
 
 @routes.post('/tweet/create')
