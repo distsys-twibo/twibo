@@ -110,12 +110,14 @@ class FeedPushCacheAside(FeedPush):
         n = len(tweet_ids)
         if n != 0:
             _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
-            tweets = await redis.mget(*_tweet_ids)
+            tweets = await redis.mget(*_tweet_ids, encoding='utf8')
         t4 = time.time()
         t_get_tweet = 0
         t_set_cache = 0
         for _index, each_t in enumerate(tweets):
-            if not each_t:
+            if each_t:
+                tweets[_index] = json.loads(each_t)
+            else:
                 t_id = tweet_ids[_index]
                 tt0 = time.time()
                 t = await tweet.get_by_tweet_id(t_id)
