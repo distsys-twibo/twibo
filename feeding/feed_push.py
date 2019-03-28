@@ -26,6 +26,10 @@ class FeedPush(BaseFeeder):
         super().__init__(*args, **kwargs)
         self.name_feedlock = 'feed-lock'
         self.prefix_feedlist = 'feed-list'
+        self.feed_list_maxlen = conf['feed-list-maxlen']
+        # remove previous lock
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.unlock(self.name_feedlock))
 
     async def create(self, user_id, tweet_id, content, timestamp, **kwargs):
         logger.debug('user_id {} tweet_id {} ts {}'.format(
@@ -39,9 +43,13 @@ class FeedPush(BaseFeeder):
         # TODO: this lock is too big; maybe only set a per-user lock
         await self.lock(self.name_feedlock)
         t2 = time.time()
-        t_feedlist = (redis.lpush(self.get_key(self.prefix_feedlist, flr), tweet_id)
-                        for flr in followers)
-        await asyncio.gather(t_db, *t_feedlist)
+        keys = [self.get_key(self.prefix_feedlist, flr) for flr in followers]
+        t_feedlist = (redis.lpush(k, tweet_id) for k in keys)
+        lengths = (await asyncio.gather(t_db, *t_feedlist))[1:]
+        need_trim = [i for i, l in enumerate(lengths) if l > self.feed_list_maxlen]
+        if len(need_trim) > 0:
+            tasks = (redis.ltrim(keys[i], 0, self.prunelen - 1) for i in need_trim)
+            await asyncio.gather(*tasks)
         t3 = time.time()
         await self.unlock(self.name_feedlock)
         timer['db_get_follower'] = t1 - t0

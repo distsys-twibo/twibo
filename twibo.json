@@ -1,13 +1,15 @@
 {
     "redis-host": "localhost",
     "redis-port": 9891,
-    "redis-db": 0,
-    "mongo-host": "127.0.0.1",
-    "mongo-port": 9881,
-    "mongo-db": "twibo",
-    "mongo-str": "",
-    "feeder": "pull",
-    "cache-expire-interval": 15,
-    "write-behind-interval": 5,
-    "write-behind-batchsize": 100
+"redis-db": 0,
+"mongo-host": "127.0.0.1",
+"mongo-port": 9881,
+"mongo-db": "twibo",
+"mongo-str": "",
+"feeder": "pull",
+    "cache-expire-interval": 60,
+    "write-behind-interval": 10,
+    "write-behind-batchsize": 100,
+    "feed-list-maxlen": 200,
+    "feed-list-prunelen": 100
 }
