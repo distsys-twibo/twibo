@@ -27,6 +27,7 @@ class FeedPush(BaseFeeder):
         self.name_feedlock = 'feed-lock'
         self.prefix_feedlist = 'feed-list'
         self.feed_list_maxlen = conf['feed-list-maxlen']
+        self.feed_list_prunelen = conf['feed-list-prunelen']
         # remove previous lock
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.unlock(self.name_feedlock))
@@ -48,7 +49,7 @@ class FeedPush(BaseFeeder):
         lengths = (await asyncio.gather(t_db, *t_feedlist))[1:]
         need_trim = [i for i, l in enumerate(lengths) if l > self.feed_list_maxlen]
         if len(need_trim) > 0:
-            tasks = (redis.ltrim(keys[i], 0, self.prunelen - 1) for i in need_trim)
+            tasks = (redis.ltrim(keys[i], 0, self.feed_list_prunelen - 1) for i in need_trim)
             await asyncio.gather(*tasks)
         t3 = time.time()
         await self.unlock(self.name_feedlock)
@@ -235,9 +236,14 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         # add tweets to the queue waiting to be persisted
         await self.lock(self.name_feedlock)
         t3 = time.time()
-        t_feedlist = (redis.lpush(self.get_key(self.prefix_feedlist, flr), tweet_id)
-                        for flr in followers)
-        await asyncio.gather(*t_feedlist)
+        keys = [self.get_key(self.prefix_feedlist, flr) for flr in followers]
+        t_feedlist = (redis.lpush(k, tweet_id) for k in keys)
+        lengths = (await asyncio.gather(*t_feedlist))[1:]
+        need_trim = [i for i, l in enumerate(lengths) if l > self.feed_list_maxlen]
+        if len(need_trim) > 0:
+            need_trim_keys = [keys[i] for i in need_trim]
+            tasks = (redis.ltrim(keys[i], 0, self.feed_list_prunelen - 1) for i in need_trim)
+            await asyncio.gather(*tasks)
         t4 = time.time()
         await self.unlock(self.name_feedlock)
         timer['cache_set_tweet'] = t1 - t0
