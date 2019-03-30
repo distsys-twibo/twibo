@@ -124,13 +124,17 @@ class FeedPushCacheAside(FeedPush):
         t4 = time.time()
         t_get_tweet = 0
         t_set_cache = 0
+        cache_hit = 0
+        db_req = 0
         for _index, each_t in enumerate(tweets):
             if each_t:
                 tweets[_index] = json.loads(each_t)
+                cache_hit += 1
             else:
                 t_id = tweet_ids[_index]
                 tt0 = time.time()
                 t = await tweet.get_by_tweet_id(t_id)
+                db_req += 1
                 tt1 = time.time()
                 json_t = json.dumps(t[0])
                 await redis_lru.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
@@ -149,6 +153,9 @@ class FeedPushCacheAside(FeedPush):
         timer['db_get_tweet'] = t_get_tweet
         timer['cache_set_tweet'] = t_set_cache
         timer['op_sort'] = t6 - t5
+        timer['op_cache_try'] = n
+        timer['op_cache_hit'] = cache_hit
+        timer['op_db_req'] = db_req
 
         return tweets
 
