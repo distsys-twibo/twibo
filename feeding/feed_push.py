@@ -5,7 +5,7 @@ import json
 import random
 import time
 
-from caching.caching_utils import redis
+from caching.caching_utils import redis, redis_lru
 from db import tweet, user_follow
 from .base_feeder import BaseFeeder
 from utils.config import conf
@@ -120,7 +120,7 @@ class FeedPushCacheAside(FeedPush):
         n = len(tweet_ids)
         if n != 0:
             _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
-            tweets = await redis.mget(*_tweet_ids, encoding='utf8')
+            tweets = await redis_lru.mget(*_tweet_ids, encoding='utf8')
         t4 = time.time()
         t_get_tweet = 0
         t_set_cache = 0
@@ -133,7 +133,7 @@ class FeedPushCacheAside(FeedPush):
                 t = await tweet.get_by_tweet_id(t_id)
                 tt1 = time.time()
                 json_t = json.dumps(t[0])
-                await redis.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
+                await redis_lru.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
                 tt2 = time.time()
                 tweets[_index] = t[0]
                 t_get_tweet += tt1 - tt0
@@ -190,8 +190,8 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                         break
                     # retrieve tweet content
                     new_tweet_keys = [self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids]
-                    new_tweets = await redis.mget(*new_tweet_keys, encoding='utf8')
-                    t_expire = (redis.expire(k, self.expire_interval) for k in new_tweet_keys)
+                    new_tweets = await redis_lru.mget(*new_tweet_keys, encoding='utf8')
+                    t_expire = (redis_lru.expire(k, self.expire_interval) for k in new_tweet_keys)
                     # write them to db
                     new_tweets = map(json.loads, new_tweets)
                     asyncio.gather(
@@ -226,7 +226,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         })
         t0 = time.time()
         # only set expire after the tweet is persisted
-        t_add_global = redis.set(self.get_key(self.prefix_cache, tweet_id), twt)
+        t_add_global = redis_lru.set(self.get_key(self.prefix_cache, tweet_id), twt)
         t_add_track = redis.rpush(self.key_newtweets, tweet_id)
         await asyncio.gather(t_add_global, t_add_track)
         t1 = time.time()
