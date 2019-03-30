@@ -20,13 +20,26 @@ t_maxlen = 400
 
 
 class Transaction(object):
-    def __init__(self):
-        self.f = open(activity_file)
+    def __init__(self, n_processes=None):
+        self.f = []
+        n_processes = n_processes if n_processes is not None else 100
+        if n_processes == 1:
+            self.f.append(open(activity_file))
+        else:
+            # exhaustively open 100 input files...
+            try:
+                for i in range(n_processes):
+                    self.f.append(open(activity_file + '.{}'.format(i)))
+            except:
+                pass
+        print 'found {} input files'.format(len(self.f))
         self.tid_prefix = socket.gethostname()
         self.s = requests.session()
+        # will be overriden by multimechnize
+        self.process_num = 0
 
     def next_act(self):
-        l = self.f.readline()
+        l = self.f[self.process_num].readline()
         act = utils.parse_line(l)
         utils.norm_act(act, 1, t_maxlen)
         return act
@@ -56,5 +69,6 @@ class Transaction(object):
 
 
 if __name__ == '__main__':
-    trans = Transaction()
-    trans.run()
+    trans = Transaction(8)
+    while 1:
+        trans.run()
