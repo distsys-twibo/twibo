@@ -42,7 +42,7 @@ class FeedPush(BaseFeeder):
         t_db = tweet.create(user_id, tweet_id, content, timestamp)
         # add tweet id to the feed list of all followers
         # TODO: this lock is too big; maybe only set a per-user lock
-        await self.lock(self.name_feedlock)
+        # await self.lock(self.name_feedlock)
         t2 = time.time()
         keys = [self.get_key(self.prefix_feedlist, flr) for flr in followers]
         t_feedlist = (redis.lpush(k, tweet_id) for k in keys)
@@ -52,7 +52,7 @@ class FeedPush(BaseFeeder):
             tasks = (redis.ltrim(keys[i], 0, self.feed_list_prunelen - 1) for i in need_trim)
             await asyncio.gather(*tasks)
         t3 = time.time()
-        await self.unlock(self.name_feedlock)
+        # await self.unlock(self.name_feedlock)
         timer['db_get_follower'] = t1 - t0
         timer['op_lock'] = t2 - t1
         timer['other_create_and_push_feedlist'] = t3 - t2
@@ -122,39 +122,42 @@ class FeedPushCacheAside(FeedPush):
             _tweet_ids = (self.get_key(self.prefix_cache, id) for id in tweet_ids)
             tweets = await redis_lru.mget(*_tweet_ids, encoding='utf8')
         t4 = time.time()
-        t_get_tweet = 0
-        t_set_cache = 0
-        cache_hit = 0
-        db_req = 0
-        for _index, each_t in enumerate(tweets):
-            if each_t:
-                tweets[_index] = json.loads(each_t)
-                cache_hit += 1
-            else:
-                t_id = tweet_ids[_index]
-                tt0 = time.time()
-                t = await tweet.get_by_tweet_id(t_id)
-                db_req += 1
-                tt1 = time.time()
-                json_t = json.dumps(t[0])
-                await redis_lru.set(self.get_key(self.prefix_cache, t_id), json_t, expire=self.expire_interval)
-                tt2 = time.time()
-                tweets[_index] = t[0]
-                t_get_tweet += tt1 - tt0
-                t_set_cache += tt2 - tt1
+
+        miss_tweet_inds = [i for i in range(n) if tweets[i] is None]
+        miss_tweet_ids = [tweet_ids[i] for i in miss_tweet_inds]
+        miss_tweets = await tweet.get_by_tweet_ids(miss_tweet_ids)
+        db_req = len(miss_tweets)
+
         t5 = time.time()
-        tweets.sort(key=lambda x: x['ts'], reverse=True)
+
+        tasks = (redis_lru.set(
+                            self.get_key(self.prefix_cache, t['tweet_id']),
+                            json.dumps(t),
+                            expire=self.expire_interval) for t in miss_tweets)
+        await asyncio.gather(*tasks)
+
         t6 = time.time()
+
+        miss_tweet_inds_set = set(miss_tweet_inds)
+        hit_tweets_inds = [i for i in range(n) if i not in miss_tweet_inds_set]
+        hit_tweets = [json.loads(tweets[i]) for i in hit_tweets_inds]
+        cache_hit = len(hit_tweets)
+
+        tweets = miss_tweets + hit_tweets
+
+        tweets.sort(key=lambda x: x['ts'], reverse=True)
+        t7 = time.time()
 
         timer['op_lock'] = t1 - t0
         timer['cache_get_tweet_ids'] = t2 - t1
         timer['cache_pop_tweets'] = t3 - t2
         timer['cache_get_tweet'] = t4 - t3
-        timer['db_get_tweet'] = t_get_tweet
-        timer['cache_set_tweet'] = t_set_cache
-        timer['op_sort'] = t6 - t5
+        timer['db_get_tweet'] = t5 - t4
+        timer['cache_set_tweet'] = t6 - t5
+        timer['op_sort'] = t7 - t6
         timer['op_cache_try'] = n
         timer['op_cache_hit'] = cache_hit
+        timer['op_cache_rate'] = cache_hit / (n + 1e-5)
         timer['op_db_req'] = db_req
 
         return tweets
