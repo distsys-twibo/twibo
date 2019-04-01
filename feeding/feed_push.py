@@ -201,6 +201,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
                     # retrieve tweet content
                     new_tweet_keys = [self.get_key(self.prefix_cache, tid) for tid in new_tweet_ids]
                     new_tweets = await redis_lru.mget(*new_tweet_keys, encoding='utf8')
+                    new_tweets = [_ for _ in new_tweets if _]
                     t_expire = (redis_lru.expire(k, self.expire_interval) for k in new_tweet_keys)
                     # write them to db
                     new_tweets = map(json.loads, new_tweets)
@@ -244,7 +245,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
         followers = await user_follow.all_followers(user_id)
         t2 = time.time()
         # add tweets to the queue waiting to be persisted
-        await self.lock(self.name_feedlock)
+        # await self.lock(self.name_feedlock)
         t3 = time.time()
         keys = [self.get_key(self.prefix_feedlist, flr) for flr in followers]
         t_feedlist = (redis.lpush(k, tweet_id) for k in keys)
@@ -255,7 +256,7 @@ class FeedPushWriteBehind(FeedPushCacheAside):
             tasks = (redis.ltrim(keys[i], 0, self.feed_list_prunelen - 1) for i in need_trim)
             await asyncio.gather(*tasks)
         t4 = time.time()
-        await self.unlock(self.name_feedlock)
+        # await self.unlock(self.name_feedlock)
         timer['cache_set_tweet'] = t1 - t0
         timer['db_get_follower'] = t2 - t1
         timer['op_lock'] = t3 - t2
