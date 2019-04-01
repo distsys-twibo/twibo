@@ -10,11 +10,11 @@ sys.path.insert(0, os.getcwd())
 import utils
 
 
-url_base = 'http://127.0.0.1:9991'
+url_base = 'http://127.0.0.1:9970'
 url_create = url_base + '/tweet/create'
 url_get = url_base + '/tweet/get'
 # path to the output of SONETOR
-activity_file = '/u7/j892zhang/mem/twibo/8w-sorted.txt'
+activity_file = '/u7/j892zhang/mem/twibo/concur-16/8w-after100wpublish.txt'
 # max length of a tweet
 t_maxlen = 400
 
@@ -34,7 +34,9 @@ print 'found {} input files'.format(len(f))
 
 class Transaction(object):
     def __init__(self, n_processes=None):
-        self.tid_prefix = socket.gethostname()
+        # change prefix for prefilling and testing
+        self.tid_prefix = 'test'
+        # self.tid_prefix = 'prefill'
         self.s = requests.session()
         # will be overriden by multimechnize
         self.process_num = 0
@@ -56,8 +58,9 @@ class Transaction(object):
             })
             pref = 'get'
         else:
+            tweet_id = self.tid_prefix + '-' + str(ts) + utils.random_string(6)
             resp = self.s.post(url_create, data={
-                'tweet_id': self.tid_prefix + '-' + str(ts) + '-' + utils.random_string(6),
+                'tweet_id': tweet_id,
                 'user_id': user_id,
                 'ts': ts,
                 'content': utils.random_string(tlen)
