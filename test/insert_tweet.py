@@ -3,7 +3,7 @@ import sys
 import requests
 
 
-url_create = 'http://localhost:9990/tweet/create'
+url_create = 'http://localhost:9991/tweet/create'
 
 
 if len(sys.argv) != 2:

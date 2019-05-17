@@ -4,8 +4,8 @@ import json
 import requests
 
 
-url_create = 'http://localhost:9990/user/create_many'
-url_follow = 'http://localhost:9990/user/follow_many'
+url_create = 'http://localhost:9991/user/create_many'
+url_follow = 'http://localhost:9991/user/follow_many'
 
 
 if len(sys.argv) != 2:
